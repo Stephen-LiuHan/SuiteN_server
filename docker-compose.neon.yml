@@ -1,0 +1,11 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: postgresql://neondb_owner:npg_RsQepyAW86Nw@ep-tiny-glitter-a12bte2m-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+      JWT_SECRET: suiten-production-jwt-secret-change-this
+      PORT: "8080"
+    ports:
+      - "8080:8080"

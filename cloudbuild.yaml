@@ -1,0 +1,39 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/suiten-server:$COMMIT_SHA', '-t', 'gcr.io/$PROJECT_ID/suiten-server:latest', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/suiten-server:$COMMIT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/suiten-server:latest']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'suiten-server'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/suiten-server:$COMMIT_SHA'
+      - '--region'
+      - 'asia-northeast1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'DATABASE_URL=${_DATABASE_URL},JWT_SECRET=${_JWT_SECRET}'
+
+images:
+  - 'gcr.io/$PROJECT_ID/suiten-server:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/suiten-server:latest'
+
+substitutions:
+  _DATABASE_URL: ''
+  _JWT_SECRET: ''
+
+options:
+  logging: CLOUD_LOGGING_ONLY
