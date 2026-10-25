@@ -36,7 +36,7 @@ func (u *User) ToResponse() *UserResponse {
 type Device struct {
 	ID           uuid.UUID  `db:"id" json:"id"`
 	UserID       uuid.UUID  `db:"user_id" json:"user_id"`
-	DeviceID     string     `db:"device_id" json:"device_id"`   // Client-generated UUID
+	DeviceID     string     `db:"device_id" json:"device_id"` // Client-generated UUID
 	DeviceName   *string    `db:"device_name" json:"device_name,omitempty"`
 	LastSyncAt   *time.Time `db:"last_sync_at" json:"last_sync_at,omitempty"`
 	LastActiveAt time.Time  `db:"last_active_at" json:"last_active_at"`
@@ -56,11 +56,11 @@ type RefreshToken struct {
 
 // UserProfile represents user preferences
 type UserProfile struct {
-	ID                uuid.UUID        `db:"id" json:"id"`
-	UserID            uuid.UUID        `db:"user_id" json:"user_id"`
-	AxisPreferences   JSONMap          `db:"axis_preferences" json:"axis_preferences"`
-	ActionPreferences JSONMap          `db:"action_preferences" json:"action_preferences"`
-	UpdatedAt         time.Time        `db:"updated_at" json:"updated_at"`
+	ID                uuid.UUID `db:"id" json:"id"`
+	UserID            uuid.UUID `db:"user_id" json:"user_id"`
+	AxisPreferences   JSONMap   `db:"axis_preferences" json:"axis_preferences"`
+	ActionPreferences JSONMap   `db:"action_preferences" json:"action_preferences"`
+	UpdatedAt         time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // DefaultAxisPreferences returns default axis preferences

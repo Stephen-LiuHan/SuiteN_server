@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 
@@ -137,9 +138,15 @@ func (h *AnalyticsHandler) PersonalAnalytics(c echo.Context) error {
 	// Generate insights
 	insights := generateInsights(axisDistribution, actionStats)
 
+	northStar, err := h.buildNorthStar(ctx, userID, time.Now(), since)
+	if err != nil {
+		c.Logger().Errorf("Failed to get north star metric: %v", err)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data": map[string]interface{}{
+			"north_star":        northStar,
 			"period":            period,
 			"axis_distribution": axisDistribution,
 			"action_stats":      actionStats,
@@ -234,17 +241,23 @@ func (h *AnalyticsHandler) GlobalAnalytics(c echo.Context) error {
 		feedbackDistribution["3"] = float64(feedbackStatsData.Count3) / float64(feedbackStatsData.Total)
 	}
 
+	northStar, err := h.buildNorthStar(ctx, uuid.Nil, time.Now(), since)
+	if err != nil {
+		c.Logger().Errorf("Failed to get north star metric: %v", err)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data": map[string]interface{}{
-			"period":                   period,
-			"total_users":              userStats.TotalUsers,
-			"active_users":             userStats.ActiveUsers,
-			"axis_distribution":        axisDistribution,
-			"action_open_rates":        actionOpenRates,
-			"action_completion_rates":  actionCompletionRates,
-			"feedback_average":         feedbackStatsData.Average,
-			"feedback_distribution":    feedbackDistribution,
+			"north_star":              northStar,
+			"period":                  period,
+			"total_users":             userStats.TotalUsers,
+			"active_users":            userStats.ActiveUsers,
+			"axis_distribution":       axisDistribution,
+			"action_open_rates":       actionOpenRates,
+			"action_completion_rates": actionCompletionRates,
+			"feedback_average":        feedbackStatsData.Average,
+			"feedback_distribution":   feedbackDistribution,
 		},
 	})
 }

@@ -34,6 +34,23 @@ type BookSyncData struct {
 	Summary   *string `json:"summary,omitempty"`
 	CreatedAt int64   `json:"created_at"`
 	UpdatedAt int64   `json:"updated_at"`
+
+	SummaryGeneratedAt  *int64 `json:"summary_generated_at,omitempty"`
+	SummarySavedAt      *int64 `json:"summary_saved_at,omitempty"`
+	SummaryEditedAt     *int64 `json:"summary_edited_at,omitempty"`
+	SummaryHelpfulness  *int   `json:"summary_helpfulness,omitempty"`
+	SummaryCaptureCount *int   `json:"summary_capture_count,omitempty"`
+}
+
+// SummaryMetrics converts the summary fields to SummaryMetrics.
+func (d BookSyncData) SummaryMetrics() SummaryMetrics {
+	return SummaryMetrics{
+		GeneratedAt:  UnixPtrToTime(d.SummaryGeneratedAt),
+		SavedAt:      UnixPtrToTime(d.SummarySavedAt),
+		EditedAt:     UnixPtrToTime(d.SummaryEditedAt),
+		Helpfulness:  d.SummaryHelpfulness,
+		CaptureCount: d.SummaryCaptureCount,
+	}
 }
 
 // SessionSyncData represents the data for a reading session in a sync request
@@ -118,6 +135,13 @@ type BookResponse struct {
 	CreatedAt int64     `json:"created_at"`
 	UpdatedAt int64     `json:"updated_at"`
 	DeletedAt *int64    `json:"deleted_at,omitempty"`
+
+	SummaryGeneratedAt  *int64 `json:"summary_generated_at,omitempty"`
+	SummarySavedAt      *int64 `json:"summary_saved_at,omitempty"`
+	SummaryEditedAt     *int64 `json:"summary_edited_at,omitempty"`
+	SummaryHelpfulness  *int   `json:"summary_helpfulness,omitempty"`
+	SummaryCaptureCount *int   `json:"summary_capture_count,omitempty"`
+	SummaryCompletedAt  *int64 `json:"summary_completed_at,omitempty"`
 }
 
 // SessionResponse represents a reading session in sync response

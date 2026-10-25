@@ -8,16 +8,16 @@ import (
 
 // AIResult represents an AI analysis result
 type AIResult struct {
-	ID                 uuid.UUID       `db:"id" json:"id"`
-	UserID             uuid.UUID       `db:"user_id" json:"user_id"`
-	CaptureID          uuid.UUID       `db:"capture_id" json:"capture_id"`
-	DraftSummary       string          `db:"draft_summary" json:"draft_summary"`
-	DeepeningQuestion  string          `db:"deepening_question" json:"deepening_question"`
-	AxisSelected       *string         `db:"axis_selected" json:"axis_selected,omitempty"`
-	TopicTags          JSONStringArray `db:"topic_tags" json:"topic_tags"`
-	CreatedAt          time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt          time.Time       `db:"updated_at" json:"updated_at"`
-	DeletedAt          *time.Time      `db:"deleted_at" json:"deleted_at,omitempty"`
+	ID                uuid.UUID       `db:"id" json:"id"`
+	UserID            uuid.UUID       `db:"user_id" json:"user_id"`
+	CaptureID         uuid.UUID       `db:"capture_id" json:"capture_id"`
+	DraftSummary      string          `db:"draft_summary" json:"draft_summary"`
+	DeepeningQuestion string          `db:"deepening_question" json:"deepening_question"`
+	AxisSelected      *string         `db:"axis_selected" json:"axis_selected,omitempty"`
+	TopicTags         JSONStringArray `db:"topic_tags" json:"topic_tags"`
+	CreatedAt         time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time       `db:"updated_at" json:"updated_at"`
+	DeletedAt         *time.Time      `db:"deleted_at" json:"deleted_at,omitempty"`
 }
 
 // AIResultSyncRequest represents an AI result in sync request
@@ -42,8 +42,8 @@ func (r *AIResultSyncRequest) ToModel(userID uuid.UUID) *AIResult {
 		DeepeningQuestion: r.DeepeningQuestion,
 		AxisSelected:      r.AxisSelected,
 		TopicTags:         r.TopicTags,
-		CreatedAt:         time.Unix(r.CreatedAt, 0),
-		UpdatedAt:         time.Unix(r.UpdatedAt, 0),
+		CreatedAt:         UnixToTime(r.CreatedAt),
+		UpdatedAt:         UnixToTime(r.UpdatedAt),
 	}
 }
 
@@ -107,7 +107,7 @@ func (r *NextActionSyncRequest) ToModel(userID uuid.UUID) *NextAction {
 		Query:       r.Query,
 		Link:        r.Link,
 		Rank:        r.Rank,
-		CreatedAt:   time.Unix(r.CreatedAt, 0),
+		CreatedAt:   UnixToTime(r.CreatedAt),
 	}
 }
 

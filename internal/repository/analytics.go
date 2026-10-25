@@ -306,3 +306,81 @@ func (r *AnalyticsRepository) GetGlobalFeedbackTrend(ctx context.Context, since 
 	err := r.db.SelectContext(ctx, &results, query, since)
 	return results, err
 }
+
+// NorthStarMonth is the North Star Metric for one month:
+// the number of books whose "自分のまとめ" was first completed in that month.
+type NorthStarMonth struct {
+	Month              time.Time `db:"month"`
+	CompletedSummaries int       `db:"completed_summaries"`
+}
+
+// GetNorthStarByMonth returns completed summaries per month since the given time.
+// Pass uuid.Nil as userID for all users.
+func (r *AnalyticsRepository) GetNorthStarByMonth(ctx context.Context, userID uuid.UUID, since time.Time) ([]NorthStarMonth, error) {
+	var rows []NorthStarMonth
+	query := `
+		SELECT date_trunc('month', summary_completed_at AT TIME ZONE 'UTC') AS month,
+		       COUNT(*) AS completed_summaries
+		FROM books
+		WHERE summary_completed_at IS NOT NULL
+		  AND summary_completed_at >= $1
+		  AND deleted_at IS NULL
+		  AND ($2 = '00000000-0000-0000-0000-000000000000'::uuid OR user_id = $2)
+		GROUP BY month
+		ORDER BY month
+	`
+	err := r.db.SelectContext(ctx, &rows, query, since, userID)
+	return rows, err
+}
+
+// NorthStarInputs are the input metrics that drive the North Star Metric.
+type NorthStarInputs struct {
+	// Books with at least one capture in the period
+	ActiveBooks int `db:"active_books"`
+	// Average captures per active book
+	CapturesPerBook float64 `db:"captures_per_book"`
+	// Active books that have both a doubt (🤔) and an empathy (❤️) capture
+	BooksWithDoubtAndEmpathy int `db:"books_with_doubt_and_empathy"`
+	// Active books with at least SummaryMinCaptures captures
+	BooksReadyForSummary int `db:"books_ready_for_summary"`
+	// Of those, books that have a generated summary
+	BooksWithSummary int `db:"books_with_summary"`
+	// Of those, books whose summary the reader edited
+	BooksWithEditedSummary int `db:"books_with_edited_summary"`
+	// Average helpfulness of rated summaries (0 when none)
+	SummaryHelpfulnessAvg float64 `db:"summary_helpfulness_avg"`
+}
+
+// GetNorthStarInputs returns the input metrics for books with captures since the given time.
+// Pass uuid.Nil as userID for all users.
+func (r *AnalyticsRepository) GetNorthStarInputs(ctx context.Context, userID uuid.UUID, since time.Time, minCaptures int) (*NorthStarInputs, error) {
+	var inputs NorthStarInputs
+	query := `
+		WITH book_captures AS (
+			SELECT b.id AS book_id,
+			       COUNT(c.id) AS captures,
+			       BOOL_OR(c.emotion LIKE '%🤔%') AS has_doubt,
+			       BOOL_OR(c.emotion LIKE '%❤️%') AS has_empathy,
+			       MAX(b.summary_generated_at) AS generated_at,
+			       MAX(b.summary_edited_at) AS edited_at,
+			       MAX(b.summary_helpfulness) AS helpfulness
+			FROM books b
+			JOIN reading_sessions s ON s.book_id = b.id AND s.deleted_at IS NULL
+			JOIN captures c ON c.session_id = s.id AND c.deleted_at IS NULL
+			WHERE b.deleted_at IS NULL
+			  AND c.created_at >= $1
+			  AND ($2 = '00000000-0000-0000-0000-000000000000'::uuid OR b.user_id = $2)
+			GROUP BY b.id
+		)
+		SELECT COUNT(*) AS active_books,
+		       COALESCE(AVG(captures), 0) AS captures_per_book,
+		       COUNT(*) FILTER (WHERE has_doubt AND has_empathy) AS books_with_doubt_and_empathy,
+		       COUNT(*) FILTER (WHERE captures >= $3) AS books_ready_for_summary,
+		       COUNT(*) FILTER (WHERE captures >= $3 AND generated_at IS NOT NULL) AS books_with_summary,
+		       COUNT(*) FILTER (WHERE captures >= $3 AND edited_at IS NOT NULL) AS books_with_edited_summary,
+		       COALESCE(AVG(helpfulness) FILTER (WHERE helpfulness IS NOT NULL), 0) AS summary_helpfulness_avg
+		FROM book_captures
+	`
+	err := r.db.GetContext(ctx, &inputs, query, since, userID, minCaptures)
+	return &inputs, err
+}

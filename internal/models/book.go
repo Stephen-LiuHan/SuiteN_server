@@ -16,6 +16,14 @@ type Book struct {
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time  `db:"updated_at" json:"updated_at"`
 	DeletedAt *time.Time `db:"deleted_at" json:"deleted_at,omitempty"`
+
+	// Book-level summary metrics (North Star Metric)
+	SummaryGeneratedAt  *time.Time `db:"summary_generated_at" json:"summary_generated_at,omitempty"`
+	SummarySavedAt      *time.Time `db:"summary_saved_at" json:"summary_saved_at,omitempty"`
+	SummaryEditedAt     *time.Time `db:"summary_edited_at" json:"summary_edited_at,omitempty"`
+	SummaryHelpfulness  *int       `db:"summary_helpfulness" json:"summary_helpfulness,omitempty"`
+	SummaryCaptureCount *int       `db:"summary_capture_count" json:"summary_capture_count,omitempty"`
+	SummaryCompletedAt  *time.Time `db:"summary_completed_at" json:"summary_completed_at,omitempty"`
 }
 
 // BookSyncRequest represents a book in sync request
@@ -36,8 +44,8 @@ func (r *BookSyncRequest) ToModel(userID uuid.UUID) *Book {
 		Title:     r.Title,
 		Author:    r.Author,
 		Summary:   r.Summary,
-		CreatedAt: time.Unix(r.CreatedAt, 0),
-		UpdatedAt: time.Unix(r.UpdatedAt, 0),
+		CreatedAt: UnixToTime(r.CreatedAt),
+		UpdatedAt: UnixToTime(r.UpdatedAt),
 	}
 }
 

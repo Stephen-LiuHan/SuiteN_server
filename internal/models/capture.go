@@ -40,8 +40,8 @@ func (r *CaptureSyncRequest) ToModel(userID uuid.UUID) *Capture {
 		Emotion:   r.Emotion,
 		UserMemo:  r.UserMemo,
 		AIStatus:  r.AIStatus,
-		CreatedAt: time.Unix(r.CreatedAt, 0),
-		UpdatedAt: time.Unix(r.UpdatedAt, 0),
+		CreatedAt: UnixToTime(r.CreatedAt),
+		UpdatedAt: UnixToTime(r.UpdatedAt),
 	}
 }
 

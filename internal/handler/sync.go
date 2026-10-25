@@ -67,18 +67,31 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 	for _, item := range req.Changes.Books {
 		if item.Action == "upsert" {
 			data := item.Data
+			metrics := data.SummaryMetrics()
+			// summary_completed_at keeps the first completion, so a book counts once
+			// toward the North Star Metric, in the month it was first completed.
 			query := `
-				INSERT INTO books (id, user_id, title, author, summary, created_at, updated_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)
+				INSERT INTO books (id, user_id, title, author, summary, created_at, updated_at,
+					summary_generated_at, summary_saved_at, summary_edited_at,
+					summary_helpfulness, summary_capture_count, summary_completed_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 				ON CONFLICT (id) DO UPDATE SET
 					title = EXCLUDED.title,
 					author = EXCLUDED.author,
 					summary = EXCLUDED.summary,
 					updated_at = EXCLUDED.updated_at,
+					summary_generated_at = EXCLUDED.summary_generated_at,
+					summary_saved_at = EXCLUDED.summary_saved_at,
+					summary_edited_at = EXCLUDED.summary_edited_at,
+					summary_helpfulness = EXCLUDED.summary_helpfulness,
+					summary_capture_count = EXCLUDED.summary_capture_count,
+					summary_completed_at = COALESCE(books.summary_completed_at, EXCLUDED.summary_completed_at),
 					deleted_at = NULL
 				WHERE books.user_id = $2
 			`
-			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.Title, data.Author, data.Summary, time.Unix(data.CreatedAt, 0), time.Unix(data.UpdatedAt, 0)); err != nil {
+			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.Title, data.Author, data.Summary, models.UnixToTime(data.CreatedAt), models.UnixToTime(data.UpdatedAt),
+				metrics.GeneratedAt, metrics.SavedAt, metrics.EditedAt,
+				metrics.Helpfulness, metrics.CaptureCount, metrics.CompletedAt()); err != nil {
 				c.Logger().Errorf("Failed to upsert book: %v", err)
 			}
 		} else if item.Action == "delete" {
@@ -106,10 +119,10 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 			`
 			var endedAt *time.Time
 			if data.EndedAt != nil {
-				t := time.Unix(*data.EndedAt, 0)
+				t := models.UnixToTime(*data.EndedAt)
 				endedAt = &t
 			}
-			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.BookID, time.Unix(data.StartedAt, 0), endedAt, data.Note, time.Unix(data.CreatedAt, 0), time.Unix(data.UpdatedAt, 0)); err != nil {
+			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.BookID, models.UnixToTime(data.StartedAt), endedAt, data.Note, models.UnixToTime(data.CreatedAt), models.UnixToTime(data.UpdatedAt)); err != nil {
 				c.Logger().Errorf("Failed to upsert session: %v", err)
 			}
 		} else if item.Action == "delete" {
@@ -135,7 +148,7 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 					deleted_at = NULL
 				WHERE captures.user_id = $2
 			`
-			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.SessionID, data.Emotion, data.UserMemo, data.AIStatus, time.Unix(data.CreatedAt, 0), time.Unix(data.UpdatedAt, 0)); err != nil {
+			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.SessionID, data.Emotion, data.UserMemo, data.AIStatus, models.UnixToTime(data.CreatedAt), models.UnixToTime(data.UpdatedAt)); err != nil {
 				c.Logger().Errorf("Failed to upsert capture: %v", err)
 			}
 		} else if item.Action == "delete" {
@@ -145,7 +158,7 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 			}
 		}
 	}
-	
+
 	// AIResults
 	for _, item := range req.Changes.AIResults {
 		if item.Action == "upsert" {
@@ -162,7 +175,7 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 					deleted_at = NULL
 				WHERE ai_results.user_id = $2
 			`
-			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.CaptureID, data.DraftSummary, data.DeepeningQuestion, data.AxisSelected, data.TopicTags, time.Unix(data.CreatedAt, 0), time.Unix(data.UpdatedAt, 0)); err != nil {
+			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.CaptureID, data.DraftSummary, data.DeepeningQuestion, data.AxisSelected, data.TopicTags, models.UnixToTime(data.CreatedAt), models.UnixToTime(data.UpdatedAt)); err != nil {
 				c.Logger().Errorf("Failed to upsert ai_result: %v", err)
 			}
 		} else if item.Action == "delete" {
@@ -212,7 +225,7 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 					helpfulness = EXCLUDED.helpfulness
 				WHERE feedback_logs.user_id = $2
 			`
-			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.CaptureID, data.Helpfulness, time.Unix(data.CreatedAt, 0)); err != nil {
+			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.CaptureID, data.Helpfulness, models.UnixToTime(data.CreatedAt)); err != nil {
 				c.Logger().Errorf("Failed to upsert feedback_log: %v", err)
 			}
 		}
@@ -231,7 +244,7 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 					completed = EXCLUDED.completed
 				WHERE action_logs.user_id = $2
 			`
-			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.AIResultID, data.ActionType, data.Opened, data.Completed, time.Unix(data.CreatedAt, 0)); err != nil {
+			if _, err := tx.ExecContext(ctx, query, item.ID, userID, data.AIResultID, data.ActionType, data.Opened, data.Completed, models.UnixToTime(data.CreatedAt)); err != nil {
 				c.Logger().Errorf("Failed to upsert action_log: %v", err)
 			}
 		}
@@ -266,7 +279,6 @@ func (h *SyncHandler) Sync(c echo.Context) error {
 		"data":    response,
 	})
 }
-
 
 // SyncStatus returns the current sync status
 func (h *SyncHandler) SyncStatus(c echo.Context) error {
@@ -337,6 +349,13 @@ func buildSyncResponse(
 			Summary:   b.Summary,
 			CreatedAt: b.CreatedAt.Unix(),
 			UpdatedAt: b.UpdatedAt.Unix(),
+
+			SummaryGeneratedAt:  models.TimePtrToUnix(b.SummaryGeneratedAt),
+			SummarySavedAt:      models.TimePtrToUnix(b.SummarySavedAt),
+			SummaryEditedAt:     models.TimePtrToUnix(b.SummaryEditedAt),
+			SummaryHelpfulness:  b.SummaryHelpfulness,
+			SummaryCaptureCount: b.SummaryCaptureCount,
+			SummaryCompletedAt:  models.TimePtrToUnix(b.SummaryCompletedAt),
 		}
 		if b.DeletedAt != nil {
 			deletedAt := b.DeletedAt.Unix()
@@ -443,9 +462,9 @@ func (h *SyncHandler) BackupExport(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"data": map[string]interface{}{
-			"version":    "1.0",
+			"version":     "1.0",
 			"exported_at": time.Now().Unix(),
-			"data":       response.Changes,
+			"data":        response.Changes,
 		},
 	})
 }
@@ -471,7 +490,7 @@ func (h *SyncHandler) BackupImport(c echo.Context) error {
 
 	// // Import all data using sync logic
 	var imported int
-	
+
 	// tx, err := h.db.BeginTxx(c.Request().Context(), nil)
 	// if err != nil {
 	// 	return errorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to start transaction")
@@ -515,7 +534,6 @@ func (h *SyncHandler) BackupImport(c echo.Context) error {
 		},
 	})
 }
-
 
 // GetBooks returns user's books
 func (h *SyncHandler) GetBooks(c echo.Context) error {

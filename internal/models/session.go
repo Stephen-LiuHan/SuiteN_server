@@ -36,13 +36,13 @@ func (r *ReadingSessionSyncRequest) ToModel(userID uuid.UUID) *ReadingSession {
 		ID:        r.ID,
 		UserID:    userID,
 		BookID:    r.BookID,
-		StartedAt: time.Unix(r.StartedAt, 0),
+		StartedAt: UnixToTime(r.StartedAt),
 		Note:      r.Note,
-		CreatedAt: time.Unix(r.CreatedAt, 0),
-		UpdatedAt: time.Unix(r.UpdatedAt, 0),
+		CreatedAt: UnixToTime(r.CreatedAt),
+		UpdatedAt: UnixToTime(r.UpdatedAt),
 	}
 	if r.EndedAt != nil {
-		t := time.Unix(*r.EndedAt, 0)
+		t := UnixToTime(*r.EndedAt)
 		session.EndedAt = &t
 	}
 	return session

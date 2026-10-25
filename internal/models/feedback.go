@@ -30,7 +30,7 @@ func (r *FeedbackLogSyncRequest) ToModel(userID uuid.UUID) *FeedbackLog {
 		UserID:      userID,
 		CaptureID:   r.CaptureID,
 		Helpfulness: r.Helpfulness,
-		CreatedAt:   time.Unix(r.CreatedAt, 0),
+		CreatedAt:   UnixToTime(r.CreatedAt),
 	}
 }
 
@@ -74,7 +74,7 @@ func (r *ActionLogSyncRequest) ToModel(userID uuid.UUID) *ActionLog {
 		ActionType: r.ActionType,
 		Opened:     r.Opened,
 		Completed:  r.Completed,
-		CreatedAt:  time.Unix(r.CreatedAt, 0),
+		CreatedAt:  UnixToTime(r.CreatedAt),
 	}
 }
 

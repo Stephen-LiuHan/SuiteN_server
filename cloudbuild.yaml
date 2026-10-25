@@ -1,4 +1,9 @@
 steps:
+  # Run unit tests before building (integration tests skip without TEST_DATABASE_URL)
+  - name: 'golang:1.22'
+    entrypoint: go
+    args: ['test', './...']
+
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/suiten-server:$COMMIT_SHA', '-t', 'gcr.io/$PROJECT_ID/suiten-server:latest', '.']
